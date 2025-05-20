@@ -1,0 +1,5 @@
+# oculuz/configuration/route_generators/arc_route_config.yaml
+
+parabola_coeff_range: [0.0005, 0.005] # Коэффициент 'a' для y = a * x^2. Влияет на "крутизну" параболы.
+arc_length_ratio_range: [0.6, 1.0]   # Какую часть "видимой" дуги параболы проходим (0-1).
+                                     # "Видимая" дуга определяется тем, насколько она влезает в area_radius_meters

@@ -1,0 +1,3 @@
+# oculuz/configuration/noise_generators/gaussian_noise_config.yaml
+mean: 0.0
+std_dev: 6.0 # Стандартное отклонение шума RSSI в дБ

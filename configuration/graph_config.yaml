@@ -1,0 +1,9 @@
+# oculuz/configuration/graph_config.yaml
+
+# Параметры создания графа
+edge_creation_method: "knn"  # "knn" или "sequential"
+k_scale: 0.07                # Коэффициент для расчета k в KNN. k = max(1, round(min(7, k_scale * num_points)))
+                             # Если num_points > 100, k фиксируется на 7, если min(7, k_scale * num_points) дает > 7
+                             # Минимальное k = 1.
+min_k_for_large_graphs: 7    # Фиксированное k, если min(7, k_scale * num_points) > этой_величины И num_points > 100_threshold
+large_graph_threshold: 100   # Порог количества точек для применения min_k_for_large_graphs

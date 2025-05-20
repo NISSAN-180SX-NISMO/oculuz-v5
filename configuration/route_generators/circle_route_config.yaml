@@ -1,0 +1,14 @@
+# oculuz/configuration/route_generators/circle_route_config.yaml
+# Наследует общие параметры, добавляет/переопределяет специфичные.
+
+# min_points: 8 # Можно переопределить из common
+# max_points: 30 # Можно переопределить из common
+
+radius_range_meters: [150.0, 800.0] # Диапазон радиусов окружности (min, max) в метрах
+center_offset_ratio_max: 0.6 # Макс. смещение центра окружности от центра раб. области (0-1 от area_radius_meters)
+point_angle_perturbation_deg: 10.0 # Макс. угловое отклонение точки от идеальной окружности (в градусах)
+point_radius_perturbation_ratio: 0.15 # Макс. радиальное отклонение точки (0-1 от радиуса окружности)
+source_placement_probabilities:
+  inside: 0.6   # Источник внутри окружности
+  outside: 0.3  # Источник снаружи окружности (но в пределах раб. области)
+  center: 0.1   # Источник в центре окружности

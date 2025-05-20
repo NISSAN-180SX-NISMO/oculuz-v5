@@ -1,0 +1,5 @@
+# oculuz/configuration/noise_generators/common_noise_config.yaml
+# Управляет тем, какие типы шума активны
+
+enabled_noise_types: ["gaussian"] # Список активных типов шума. Например: ["gaussian", "poisson"]
+                                  # Пустой список [] означает отсутствие шума.

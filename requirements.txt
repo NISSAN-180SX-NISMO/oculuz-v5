@@ -1,0 +1,25 @@
+# oculuz/requirements.txt
+
+# ВНИМАНИЕ:
+# Крайне рекомендуется устанавливать PyTorch, torchvision, torchaudio и PyTorch Geometric
+# вручную, используя команды, приведенные в инструкции по настройке. Это необходимо
+# для обеспечения совместимости с CUDA 12.6 и указанной ночной сборкой PyTorch.
+# Пакеты перечислены ниже для полноты, но их следует установить вручную В ПЕРВУЮ ОЧЕРЕДЬ.
+
+# torch==2.8.0.dev20250426+cu126
+# torchvision # соответствующая версия для PyTorch
+# torchaudio # соответствующая версия для PyTorch
+# torch_geometric
+# pyg_lib # зависимость PyTorch Geometric
+# torch_scatter # зависимость PyTorch Geometric
+# torch_sparse # зависимость PyTorch Geometric
+# torch_cluster # зависимость PyTorch Geometric
+# torch_spline_conv # зависимость PyTorch Geometric
+
+# Остальные зависимости
+numpy>=1.21.0
+pandas>=1.3.0
+scikit-learn>=1.0.0
+PyYAML>=6.0
+matplotlib>=3.5.0
+tqdm>=4.60.0  # для отображения прогресс-баров во время обучения

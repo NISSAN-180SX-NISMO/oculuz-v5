@@ -1,0 +1,7 @@
+# oculuz/configuration/noise_generators/poisson_noise_config.yaml
+# Параметры для Пуассоновского шума.
+# Напоминание: применение к RSSI в дБм нетипично.
+# Здесь lambda - параметр распределения Пуассона, offset - для центрирования.
+# Шум = Poisson(lambda) - offset
+lambda: 4.0 # lambda_param в коде
+offset: 4.0

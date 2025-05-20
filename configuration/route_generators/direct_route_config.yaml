@@ -1,0 +1,8 @@
+min_points: 5
+max_points: 20
+min_step_meters: 5.0
+max_step_meters: 50.0
+base_latitude: 51.5074
+base_longitude: -0.1278
+area_radius_meters: 5000.0
+fspl_k: -20.05
