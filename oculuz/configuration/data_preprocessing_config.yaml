@@ -1,5 +1,0 @@
-rssi:
-  min_val: -130.0
-  max_val: -30.0
-coordinate:
-  embedding_dim: 64
