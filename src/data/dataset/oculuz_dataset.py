@@ -34,9 +34,9 @@ class OculuzDataset(Dataset):
             noise_common_config: Optional[CommonNoiseConfig] = None,
             noise_configs: Optional[Dict[str, Any]] = None,  # {"gaussian": GaussianNoiseConfig(), ...}
             # Пути для авто-загрузки конфигов, если они не переданы как объекты
-            data_prep_config_path: str = "oculuz/configuration/data_preprocessing_config.yaml",
-            graph_config_path: str = "oculuz/configuration/graph_config.yaml",
-            noise_common_config_path: str = "oculuz/configuration/noise_generators/common_noise_config.yaml"
+            data_prep_config_path: str = "configuration/data_preprocessing_config.yaml",
+            graph_config_path: str = "configuration/graph_config.yaml",
+            noise_common_config_path: str = "configuration/noise_generators/common_noise_config.yaml"
             # noise_configs_paths можно будет добавить для каждого типа шума
     ):
         super().__init__()
@@ -102,7 +102,26 @@ class OculuzDataset(Dataset):
 
             generator_class = gen_map[gen_type]
             # Мы передаем config_path, конструктор генератора сам загрузит/создаст конфиг
-            generator_instance = generator_class(config_path=config_path)
+
+            common_config_path = "configuration/route_generators/common_route_config.yaml"
+            direct_config_path = "configuration/route_generators/direct_route_config.yaml"
+            circle_config_path = "configuration/route_generators/circle_route_config.yaml"
+            arc_config_path = "configuration/route_generators/arc_route_config.yaml"
+            random_walk_config_path = "configuration/route_generators/random_walk_route_config.yaml"
+
+            CommonRouteConfig.load(common_config_path)
+
+            cfg = None;
+            if gen_type == "direct":
+                cfg = DirectRouteConfig.load(direct_config_path)
+            elif gen_type == "circle":
+                cfg = CircleRouteConfig.load(circle_config_path)
+            elif gen_type == "arc":
+                cfg = ArcRouteConfig.load(arc_config_path)
+            elif gen_type == "random_walk":
+                cfg = RandomWalkRouteConfig.load(random_walk_config_path)
+
+            generator_instance = generator_class(cfg)
 
             self.route_generators.append(generator_instance)
             self.route_generator_weights.append(weight)
@@ -295,10 +314,6 @@ def OculuzDataLoader(dataset: OculuzDataset, batch_size: int, shuffle: bool = Tr
     # PyTorch Geometric DataLoader
     from torch_geometric.loader import DataLoader as PyGDataLoader
     return PyGDataLoader(dataset, batch_size=batch_size, shuffle=shuffle, **kwargs)
-
-
-
-
 
 # **Примечание по `OculuzDataset` и `CSVSaver`**:
 # Я добавил метод `get_raw_data_for_csv` в `OculuzDataset`, который генерирует данные сессии в формате, более удобном для сохранения в CSV,
