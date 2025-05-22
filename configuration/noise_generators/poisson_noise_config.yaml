@@ -3,5 +3,6 @@
 # Напоминание: применение к RSSI в дБм нетипично.
 # Здесь lambda - параметр распределения Пуассона, offset - для центрирования.
 # Шум = Poisson(lambda) - offset
-lambda: 4.0 # lambda_param в коде
-offset: 4.0
+parameters:
+  lambda: 4.0 # lambda_param в коде
+  offset: 4.0

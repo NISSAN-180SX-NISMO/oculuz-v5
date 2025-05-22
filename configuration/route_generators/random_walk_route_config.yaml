@@ -1,4 +1,4 @@
 # oculuz/configuration/route_generators/random_walk_route_config.yaml
-
-turn_probability: 0.35 # Вероятность совершить поворот на каждом шаге
-turn_angle_range_deg: [-75.0, 75.0] # Диапазон углов поворота в градусах от текущего направления
+parameters:
+  turn_probability: 0.35 # Вероятность совершить поворот на каждом шаге
+  turn_angle_range_deg: [-75.0, 75.0] # Диапазон углов поворота в градусах от текущего направления

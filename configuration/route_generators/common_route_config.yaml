@@ -1,11 +1,12 @@
 # oculuz/configuration/route_generators/common_route_config.yaml
 # Общие параметры для всех генераторов маршрутов
 
-min_points: 10
-max_points: 50
-min_step_meters: 100.0   # Минимальный шаг между точками в метрах
-max_step_meters: 400.0   # Максимальный шаг между точками в метрах
-base_latitude: 51.5074  # Центр Лондона (Трафальгарская площадь)
-base_longitude: -0.1278 # Центр Лондона
-area_radius_meters: 5000.0 # Рабочая область в радиусе 5 км
-fspl_k: -20.05 # Константа для FSPL: RSSI = K - 20*log10(d_meters). TxPower=20dBm, Freq=2.4GHz
+generation_rules:
+  num_points_range: [10, 50] # Диапазон количества точек в маршруте
+  step_meters_range: [100, 400] # Диапазон расстояния между точками в метрах
+area_definition:
+  base_latitude: 51.5074  # Центр Лондона (Трафальгарская площадь)
+  base_longitude: -0.1278 # Центр Лондона
+  area_radius_meters: 5000.0 # Рабочая область в радиусе 5 км
+signal_properties:
+  fspl_k: -20.05 # Константа для FSPL: RSSI = K - 20*log10(d_meters). TxPower=20dBm, Freq=2.4GHz

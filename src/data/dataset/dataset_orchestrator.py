@@ -2,14 +2,11 @@
 import math
 import random
 import logging
-from typing import List, Dict, Any, Tuple, Optional
+from typing import List, Dict, Any, Tuple, Optional, Union
 
-import torch_geometric
+import torch_geometric  # Импортируем весь модуль
 from src.data.dataset.oculuz_dataset import OculuzDataset
-# Assuming config loaders are accessible, adjust import if necessary
-from configuration.config_loader import (
-    DataPreprocessingConfig, GraphConfig, CommonNoiseConfig
-)
+from configuration.config_loader import ConfigLoader  # Используем новый ConfigLoader
 
 logger = logging.getLogger(__name__)
 
@@ -19,42 +16,39 @@ class DatasetOrchestrator:
             self,
             total_dataset_size: int,
             route_type_distribution: Dict[str, float],
-            config_paths: Dict[str, Any],
-            # Example config_paths:
+            config_paths_dict: Dict[str, Any],
+            # Пример config_paths_dict:
             # {
-            #     "route_configs": {
+            #     "route_generators": { # Специфичные конфиги для каждого типа маршрута
             #         "direct": "configuration/route_generators/direct_route_config.yaml",
             #         "circle": "configuration/route_generators/circle_route_config.yaml",
-            #         # ...
             #     },
-            #     "common_configs": {
-            #         "data_prep": "configuration/data_preprocessing_config.yaml",
-            #         "graph": "configuration/graph_config.yaml",
-            #         "noise_common": "configuration/noise_generators/common_noise_config.yaml",
-            #         # Optional: specific noise config paths if not relying on OculuzDataset defaults
-            #         # "gaussian_noise": "...",
-            #         # "poisson_noise": "...",
+            #     "common_route_config": "configuration/route_generators/common_config.yaml", # Общий для всех маршрутов
+            #     "data_preprocessing_config": "configuration/data_preprocessing_config.yaml",
+            #     "graph_config": "configuration/graph_config.yaml",
+            #     "noise_common_config": "configuration/noise_generators/common_noise_config.yaml",
+            #     # Опционально: пути к специфичным конфигам шума, если нужны не дефолтные
+            #     "specific_noise_configs": {
+            #         "gaussian": "configuration/noise_generators/gaussian_noise_config.yaml",
+            #         # "poisson": "..."
             #     }
             # }
     ):
         self.total_dataset_size = total_dataset_size
         self.route_type_distribution = route_type_distribution
-        self.config_paths = config_paths
+        self.config_paths_dict = config_paths_dict
 
         if not math.isclose(sum(self.route_type_distribution.values()), 1.0):
             logger.warning(
                 f"Sum of route type proportions is {sum(self.route_type_distribution.values())}, not 1.0. "
-                f"Counts will be normalized based on these proportions for the total size."
+                f"Counts will be normalized."
             )
         logger.info(f"DatasetOrchestrator initialized. Target size: {total_dataset_size}, "
                     f"Distribution: {route_type_distribution}")
 
     def _calculate_target_counts(self) -> Dict[str, int]:
-        """Calculates the number of samples for each route type using Largest Remainder Method."""
         target_counts: Dict[str, int] = {}
         initial_proportional_counts: Dict[str, float] = {}
-
-        # Normalize proportions if they don't sum to 1
         current_sum_proportions = sum(self.route_type_distribution.values())
         if current_sum_proportions == 0:
             logger.error("Sum of route type proportions is zero. Cannot distribute.")
@@ -70,47 +64,28 @@ class DatasetOrchestrator:
         remainders = sorted(
             [(rt, initial_proportional_counts[rt] - target_counts[rt]) for rt in target_counts],
             key=lambda x: x[1],
-            reverse=True  # Sort by remainder descending
+            reverse=True
         )
-
         current_integer_sum = sum(target_counts.values())
         num_to_distribute = self.total_dataset_size - current_integer_sum
 
-        if num_to_distribute < 0:
-            logger.warning(
-                f"Initial floor sum {current_integer_sum} is greater than total size {self.total_dataset_size}. "
-                f"Adjusting counts downwards. This might happen with very small proportions/total_size.")
-        # Distribute positive or negative difference
         for i in range(abs(int(num_to_distribute))):
-            if not remainders: break  # Should not happen if route_type_distribution is not empty
+            if not remainders: break
             route_type_to_adjust = remainders[i % len(remainders)][0]
             target_counts[route_type_to_adjust] += 1 if num_to_distribute > 0 else -1
-            target_counts[route_type_to_adjust] = max(0, target_counts[route_type_to_adjust])  # Ensure not negative
+            target_counts[route_type_to_adjust] = max(0, target_counts[route_type_to_adjust])
 
-        # Final check for sum
         final_sum = sum(target_counts.values())
-        if final_sum != self.total_dataset_size:
-            logger.warning(
-                f"Final calculated sum of counts {final_sum} does not match total_dataset_size {self.total_dataset_size}. "
-                f"Manual adjustment might be needed or check distribution logic for edge cases.")
-            # Basic fix: adjust the first type or largest type if discrepancy is small
-            if final_sum < self.total_dataset_size and remainders:
-                target_counts[remainders[0][0]] += (self.total_dataset_size - final_sum)
-            elif final_sum > self.total_dataset_size and remainders:
-                target_counts[remainders[0][0]] -= (final_sum - self.total_dataset_size)
+        if final_sum != self.total_dataset_size and remainders:  # Простая корректировка
+            discrepancy = self.total_dataset_size - final_sum
+            target_counts[remainders[0][0]] += discrepancy
+            target_counts[remainders[0][0]] = max(0, target_counts[remainders[0][0]])
+            logger.warning(f"Adjusted counts due to discrepancy. New sum: {sum(target_counts.values())}")
 
         logger.info(f"Target route counts for dataset generation: {target_counts}")
         return target_counts
 
     def create_dataset(self) -> Tuple[List[torch_geometric.data.Data], List[Dict[str, Any]]]:
-        """
-        Generates the dataset with the specified distribution of route types.
-
-        Returns:
-            A tuple containing:
-                - List[torch_geometric.data.Data]: Shuffled list of generated graph samples.
-                - List[Dict[str, Any]]: Corresponding list of raw data dictionaries for CSV saving.
-        """
         target_counts = self._calculate_target_counts()
         actual_counts: Dict[str, int] = {rt: 0 for rt in target_counts}
         total_generated_count = 0
@@ -118,15 +93,20 @@ class DatasetOrchestrator:
         all_graph_data_samples: List[torch_geometric.data.Data] = []
         all_raw_data_for_csv: List[Dict[str, Any]] = []
 
-        # Load common configs once
-        # These will be passed as objects to OculuzDataset to avoid repeated file loading
-        common_cfg_paths = self.config_paths.get("common_configs", {})
-        data_prep_config = DataPreprocessingConfig.load(common_cfg_paths["data_prep"])
-        graph_config = GraphConfig.load(common_cfg_paths["graph"])
-        noise_common_config = CommonNoiseConfig.load(common_cfg_paths["noise_common"])
-        # Specific noise configs (Gaussian, Poisson) will be loaded by OculuzDataset
-        # based on noise_common_config.enabled_noise_types and their default paths,
-        # unless overridden by passing noise_configs dict to OculuzDataset.
+        # Загрузка общих конфигов один раз
+        try:
+            data_prep_cfg_loader = ConfigLoader(self.config_paths_dict["data_preprocessing_config"])
+            graph_cfg_loader = ConfigLoader(self.config_paths_dict["graph_config"])
+            noise_common_cfg_loader = ConfigLoader(self.config_paths_dict["noise_common_config"])
+            common_route_cfg_path = self.config_paths_dict["common_route_config"]  # Путь, OculuzDataset загрузит
+        except KeyError as e:
+            logger.error(f"Missing a common config path in config_paths_dict: {e}", exc_info=True)
+            return [], []
+
+        specific_noise_cfg_sources: Dict[str, Union[ConfigLoader, str]] = {}
+        if "specific_noise_configs" in self.config_paths_dict:
+            for noise_type, path in self.config_paths_dict["specific_noise_configs"].items():
+                specific_noise_cfg_sources[noise_type] = ConfigLoader(path)  # Загружаем сразу
 
         for route_type, num_samples_for_type in target_counts.items():
             if num_samples_for_type <= 0:
@@ -136,27 +116,29 @@ class DatasetOrchestrator:
 
             logger.info(f"Generating {num_samples_for_type} samples for route type: {route_type}...")
 
-            route_config_path = self.config_paths.get("route_configs", {}).get(route_type)
-            if not route_config_path:
-                logger.error(f"Configuration path for route type '{route_type}' not found. Skipping.")
+            specific_route_config_path = self.config_paths_dict.get("route_generators", {}).get(route_type)
+            if not specific_route_config_path:
+                logger.error(
+                    f"Specific configuration path for route type '{route_type}' not found in 'route_generators'. Skipping.")
                 continue
 
-            specific_route_gen_spec = [{
+            # OculuzDataset ожидает список спецификаций, но для одной генерации мы передаем только один тип
+            route_gen_spec_for_temp_dataset = [{
                 "type": route_type,
-                "weight": 1.0,
-                "config_path": route_config_path
+                "weight": 1.0,  # Вес не важен, т.к. только один генератор
+                "config_path": specific_route_config_path  # OculuzDataset загрузит этот специфичный конфиг
             }]
 
-            # Instantiate OculuzDataset configured for this specific route type
             try:
+                # Передаем уже загруженные ConfigLoader объекты для общих конфигов
                 temp_dataset = OculuzDataset(
-                    dataset_size=num_samples_for_type,
-                    route_generator_specs=specific_route_gen_spec,
-                    data_prep_config=data_prep_config,  # Pass loaded object
-                    graph_config=graph_config,  # Pass loaded object
-                    noise_common_config=noise_common_config,  # Pass loaded object
-                    # noise_configs can be passed here if specific noise configs need to be overridden
-                    # from paths different than their defaults. For now, rely on OculuzDataset's internal loading.
+                    dataset_size=num_samples_for_type,  # Генерируем нужное количество для этого типа
+                    route_generator_specs=route_gen_spec_for_temp_dataset,
+                    data_prep_config_source=data_prep_cfg_loader,
+                    graph_config_source=graph_cfg_loader,
+                    noise_common_config_source=noise_common_cfg_loader,
+                    specific_noise_configs_sources=specific_noise_cfg_sources,  # Передаем загруженные
+                    default_common_route_config_path=common_route_cfg_path  # Путь к общему конфигу маршрутов
                 )
             except Exception as e:
                 logger.error(f"Failed to initialize OculuzDataset for route type {route_type}: {e}", exc_info=True)
@@ -164,11 +146,9 @@ class DatasetOrchestrator:
 
             current_type_graph_samples = []
             current_type_raw_samples = []
-            for i in range(num_samples_for_type):
+            for i in range(num_samples_for_type):  # Используем num_samples_for_type, а не temp_dataset.dataset_size
                 try:
-                    # Use the new method to get both graph and raw data consistently
                     graph_sample, raw_sample_for_csv = temp_dataset.generate_one_sample_fully(i)
-
                     if graph_sample and raw_sample_for_csv:
                         current_type_graph_samples.append(graph_sample)
                         current_type_raw_samples.append(raw_sample_for_csv)
@@ -199,11 +179,9 @@ class DatasetOrchestrator:
             logger.warning("No samples were generated for any route type.")
             return [], []
 
-        # Shuffle the collected samples, ensuring graph and raw data remain paired
         combined = list(zip(all_graph_data_samples, all_raw_data_for_csv))
         random.shuffle(combined)
-        shuffled_graphs, shuffled_raws = zip(*combined)
+        shuffled_graphs, shuffled_raws = zip(*combined) if combined else ([], [])
 
         logger.info(f"Total {len(shuffled_graphs)} samples collected and shuffled.")
-
         return list(shuffled_graphs), list(shuffled_raws)
