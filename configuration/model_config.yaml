@@ -1,0 +1,36 @@
+# oculuz/configuration/model_config.yaml
+
+# GNN Model Configuration
+# 'model_in_channels' is NOT defined here. It should be passed to the GNNModel constructor
+# based on the actual data features after preprocessing.
+# For example, if preprocessed RSSI is 1 feature and coordinate embedding is D_coord dimensions,
+# model_in_channels = 1 + D_coord.
+
+output_channels_mlp: 1 # Output dimension for RSSI regression (typically 1)
+
+# GAT Layers Configuration
+# Each item in this list defines a GAT layer.
+# The input channels for the first GAT layer is 'model_in_channels'.
+# Input channels for subsequent GAT layers are derived from the output of the previous layer.
+gat_layer_configs:
+  - out_channels: 32    # Output channels for *this* GAT layer (before considering heads and concat)
+    heads: 4            # Number of attention heads
+    concat: true        # If true, output is out_channels * heads. If false, output is out_channels (heads are averaged).
+    dropout: 0.1        # Dropout rate for GATConv's internal mechanisms (on attention weights and features)
+    activation: "elu"   # Activation function ('elu', 'relu', or 'none') applied after GATConv operation
+
+  - out_channels: 64    # This will be the dimension of node embeddings fed to the MLP if concat=false for this layer
+    heads: 1            # For the last GAT layer, often heads=1 or concat=false.
+    concat: false       # If true, MLP input would be out_channels * heads. If false, it's out_channels.
+    dropout: 0.1
+    activation: "elu"
+
+# MLP Head Configuration (applied per node after GAT layers)
+# Input to MLP is the output dimension of the last GAT layer stack.
+mlp_head_config:
+  # The hidden layer size of the MLP will be: mlp_input_dim / hidden_to_input_ratio.
+  # This corresponds to "node_dim // 2" if hidden_to_input_ratio is 2.
+  hidden_to_input_ratio: 2
+  dropout: 0.1               # Dropout rate for the hidden layer of MLP
+  activation: "relu"         # Activation for the MLP's hidden layer ('elu', 'relu', or 'none')
+  # The output layer of the MLP will have 'output_channels_mlp' neurons and no activation (suitable for regression).
